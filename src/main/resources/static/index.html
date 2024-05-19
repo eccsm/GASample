@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 40px;
+        }
+
+        .container {
+            max-width: 350px;
+            margin: auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        #message {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #barcodeContainer {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2 class="text-center">Login</h2>
+    <form id="loginForm">
+        <div class="form-group">
+            <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
+        </div>
+        <div class="form-group">
+            <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Login</button>
+    </form>
+
+    <div id="message"></div>
+
+    <div id="barcodeContainer">
+        <img id="barcodeImage" src="" alt="Barcode">
+        <div class="form-group">
+            <label for="otp">Enter OTP:</label>
+            <input type="text" class="form-control" id="otp" name="otp" placeholder="OTP" required>
+        </div>
+        <button id="verifyOTPBtn" class="btn btn-primary btn-block">Verify OTP</button>
+    </div>
+</div>
+
+<script>
+    document.getElementById("loginForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+        var username = document.getElementById("username").value;
+        var password = document.getElementById("password").value;
+        var data = {
+            username: username,
+            password: password
+        };
+
+        fetch("http://localhost:8080/authenticate", {  // Ensure this URL is correct
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('Authentication failed');
+            }
+        })
+        .then(data => {
+            if (data.success) {
+                document.getElementById("message").innerHTML = `
+                    <div class="alert alert-success" role="alert">
+                        Login successful. Scan the QR code with your Google Authenticator app.
+                    </div>`;
+                // Display barcode and OTP input
+                document.getElementById("barcodeContainer").style.display = "block";
+                document.getElementById("barcodeImage").src = "http://localhost:8080/barcode?secretKey=" + encodeURIComponent(data.secretKey) + "&username=" + encodeURIComponent(username);  // Ensure this URL is correct
+            } else {
+                document.getElementById("message").innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        Login failed. Please check your credentials.
+                    </div>`;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById("message").innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    An error occurred. Please try again.
+                </div>`;
+        });
+    });
+
+    document.getElementById("verifyOTPBtn").addEventListener("click", function(event) {
+        var otp = document.getElementById("otp").value;
+        var username = document.getElementById("username").value;
+
+        fetch("http://localhost:8080/verifyOTP", {  // Ensure this URL is correct
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ otp: otp, username: username })
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('OTP verification failed');
+            }
+        })
+        .then(data => {
+            if (data.success) {
+                document.getElementById("message").innerHTML = `
+                    <div class="alert alert-success" role="alert">
+                        OTP verification successful.
+                    </div>`;
+            } else {
+                document.getElementById("message").innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        OTP verification failed. Please try again.
+                    </div>`;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById("message").innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    An error occurred. Please try again.
+                </div>`;
+        });
+    });
+</script>
+</body>
+</html>
